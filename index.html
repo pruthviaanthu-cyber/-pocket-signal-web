@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Strong Signal Dashboard</title>
+<style>
+body{font-family:system-ui;margin:0;background:#0d1117;color:#eee}.wrap{max-width:900px;margin:auto;padding:22px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:16px;padding:18px;margin:14px 0}
+select,button{font-size:16px;padding:12px;border-radius:10px;border:1px solid #444;background:#0d1117;color:#fff}
+button{cursor:pointer}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.signal{font-size:34px;font-weight:800;padding:22px;text-align:center;border-radius:14px}
+.wait{background:#30363d}.call{background:#123d2a}.put{background:#4a2020}
+.stat{display:flex;justify-content:space-between;border-bottom:1px solid #30363d;padding:9px 0}.muted{color:#9da7b3;font-size:13px}
+@media(max-width:600px){.grid{grid-template-columns:1fr}}
+</style></head>
+<body><div class="wrap">
+<h1>📡 Strong Signal Dashboard</h1>
+<div class="card"><div class="grid">
+<label>Asset<br><select id="asset">{% for a in assets %}<option>{{a}}</option>{% endfor %}</select></label>
+<label>Expiry<br><select id="expiry">{% for e in expiries %}<option>{{e}}</option>{% endfor %}</select></label>
+</div><br><button onclick="getSignal()">CHECK SIGNAL</button></div>
+<div id="out" class="card"><div class="muted">Enter your Twelve Data API key on the server, then check a signal.</div></div>
+<div class="card muted">This is a research/signal tool, not a guaranteed-profit system. The 5s/10s/15s labels are expiries; the current implementation analyses 1-minute candles. Always validate with historical/out-of-sample testing before risking money.</div>
+</div>
+<script>
+async function getSignal(){
+ const out=document.getElementById('out'); out.innerHTML='Loading…';
+ const a=document.getElementById('asset').value,e=document.getElementById('expiry').value;
+ try{
+  const r=await fetch(`/api/signal?symbol=${encodeURIComponent(a)}&expiry=${e}`);
+  const d=await r.json(); if(!r.ok) throw new Error(d.error||'Error');
+  const cls=d.signal==='CALL'?'call':d.signal==='PUT'?'put':'wait';
+  out.innerHTML=`<div class="signal ${cls}">${d.signal==='CALL'?'🟢 STRONG CALL':d.signal==='PUT'?'🔴 STRONG PUT':'⚪ WAIT'}</div>
+  <div class="stat"><span>Asset</span><b>${d.symbol}</b></div>
+  <div class="stat"><span>Expiry</span><b>${d.expiry}</b></div>
+  <div class="stat"><span>Confidence score</span><b>${d.confidence}%</b></div>
+  <div class="stat"><span>RSI</span><b>${d.rsi}</b></div>
+  <div class="stat"><span>Bull / Bear</span><b>${d.bull_score} / ${d.bear_score}</b></div>
+  <div class="stat"><span>Price</span><b>${Number(d.price).toPrecision(8)}</b></div>
+  <p class="muted">${d.note}<br>${d.time}</p>`;
+ }catch(err){out.innerHTML=`⚠️ ${err.message}`;}
+}
+</script></body></html>
